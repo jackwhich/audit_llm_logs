@@ -44,8 +44,10 @@ def fetch_events_from_es(
         }
     }
 
-    source_includes = [
+    # 默认包含 ECS + 常见 nginx 自定义字段（适配你贴出来的 ES 文档结构）
+    default_includes = [
         time_field,
+        "@timestamp",
         "message",
         "event.*",
         "log.*",
@@ -58,7 +60,28 @@ def fetch_events_from_es(
         "user_agent.*",
         "agent.*",
         "nginx.*",
+        # custom nginx fields (non-ECS)
+        "remote_addr",
+        "clientRealIp",
+        "http_x_forwarded_for",
+        "request_method",
+        "request_uri",
+        "uri",
+        "status",
+        "request_time",
+        "upstream_time",
+        "upstream_host",
+        "upstream_status",
+        "http_user_agent",
+        "tags",
+        "host_name",
+        "server_name",
+        "scheme",
+        "args",
+        "bytes_sent",
+        "body_bytes_sent",
     ]
+    source_includes = es_cfg.source_includes if es_cfg.source_includes is not None else default_includes
 
     docs: list[dict[str, Any]] = []
     pit = client.open_point_in_time(index=es_cfg.index_pattern, keep_alive="2m")
@@ -73,7 +96,8 @@ def fetch_events_from_es(
                 "query": query,
                 "sort": sort,
                 "pit": {"id": pit_id, "keep_alive": "2m"},
-                "_source": {"includes": source_includes},
+                # source_includes=None 表示全量 _source；否则做 includes
+                "_source": True if source_includes is None else {"includes": source_includes},
                 "track_total_hits": False,
             }
             if search_after is not None:

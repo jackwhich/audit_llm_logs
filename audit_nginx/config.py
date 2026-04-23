@@ -16,6 +16,8 @@ class ElasticsearchConfig:
     index_pattern: str
     time_field: str
     verify_certs: bool = True
+    # 可选：指定 ES _source includes；为空/None 表示拉全量 _source
+    source_includes: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +107,7 @@ def load_config(path: str) -> AppConfig:
         index_pattern=str(es.get("index_pattern", "nginx-*")),
         time_field=str(es.get("time_field", "@timestamp")),
         verify_certs=bool(es.get("verify_certs", True)),
+        source_includes=list(es.get("source_includes")) if es.get("source_includes") is not None else None,
     )
 
     query_cfg = QueryConfig(

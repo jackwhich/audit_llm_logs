@@ -7,6 +7,9 @@ elasticsearch:
   time_field: "@timestamp"
   # 可选：如果 ES 使用自签证书/内网 http，可先关；生产建议开启并配置 ca_certs
   verify_certs: false
+  # 可选：限制 ES 返回的 _source 字段；不配则使用内置默认（ECS + 常见 nginx 自定义字段）
+  # 如果你想“全量字段都取回来”，可以显式设置为 null：
+  # source_includes: null
 
 query:
   timezone: "Asia/Shanghai"
