@@ -121,16 +121,47 @@ def normalize_events(
         ts_val = _first(src, [time_field, "@timestamp", "timestamp", "event.created", "event.ingested"])
         ts = _parse_ts(ts_val, timezone) or datetime.now(tz=zone)
 
-        ip = _first(src, ["source.ip", "client.ip", "nginx.access.remote_ip", "remote_addr"])
-        method = _first(src, ["http.request.method", "nginx.access.method", "request.method", "method"])
-        path = _first(src, ["url.path", "nginx.access.url", "request.path", "path"])
+        # 兼容 ECS + 你这类自定义字段（remote_addr/request_method/uri/http_user_agent 等）
+        ip = _first(
+            src,
+            [
+                "source.ip",
+                "client.ip",
+                "nginx.access.remote_ip",
+                "clientRealIp",
+                "remote_addr",
+                "http_x_forwarded_for",
+            ],
+        )
+        method = _first(src, ["http.request.method", "nginx.access.method", "request.method", "request_method", "method"])
+        path = _first(
+            src,
+            [
+                "url.path",
+                "nginx.access.url",
+                "request.path",
+                "uri",
+                "request_uri",
+                "path",
+            ],
+        )
         status_val = _first(src, ["http.response.status_code", "nginx.access.status", "status"])
         try:
             status = int(status_val) if status_val is not None else None
         except Exception:
             status = None
 
-        ua = _first(src, ["user_agent.original", "nginx.access.user_agent", "http.user_agent", "ua"])
+        ua = _first(
+            src,
+            [
+                "user_agent.original",
+                "nginx.access.user_agent",
+                "http.user_agent",
+                "http_user_agent",
+                "ua.name",
+                "ua",
+            ],
+        )
         host = _first(src, ["host.name", "server.domain", "nginx.access.host", "url.domain"])
 
         rt_val = _first(src, ["event.duration", "nginx.access.request_time", "request_time"])
@@ -142,7 +173,7 @@ def normalize_events(
             except Exception:
                 request_time = None
 
-        ut_val = _first(src, ["nginx.access.upstream_response_time", "upstream_response_time", "upstream.time"])
+        ut_val = _first(src, ["nginx.access.upstream_response_time", "upstream_response_time", "upstream.time", "upstream_time"])
         upstream_time = None
         if ut_val is not None:
             try:

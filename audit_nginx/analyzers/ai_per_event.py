@@ -40,6 +40,12 @@ def _event_for_llm(e: NormalizedEvent, max_chars: int) -> dict[str, Any]:
         "request_time": e.request_time,
         "upstream_time": e.upstream_time,
         "message": msg_s,
+        # 额外上下文字段（来自你 ES 文档结构），让 AI 更容易判断这是正常指标采集/探测等
+        "request_uri": src.get("request_uri"),
+        "upstream_host": src.get("upstream_host"),
+        "upstream_status": src.get("upstream_status"),
+        "http_x_forwarded_for": src.get("http_x_forwarded_for"),
+        "tags": src.get("tags"),
         "_id": e.raw.get("_id"),
         "_index": e.raw.get("_index"),
     }
@@ -106,7 +112,8 @@ def analyze_all_events_with_llm(
                     for _ in payload
                 ]
 
-            for ev, r in zip(payload, arr, strict=False):
+            # 兼容 Python 3.9：zip 不支持 strict 参数
+            for ev, r in zip(payload, arr):
                 row = {"event": ev, "ai": r}
                 out.append(row)
                 if jsonl_fp:
