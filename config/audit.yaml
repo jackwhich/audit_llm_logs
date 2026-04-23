@@ -20,6 +20,11 @@ output:
   # 支持 {start} {end} {run_ts}
   filename_pattern: "nginx_audit_{run_ts}.html"
 
+logging:
+  level: "INFO"
+  to_file: true
+  file_path: "./logs/audit.log"
+
 llm:
   enabled: true
   base_url: "https://llm.siraya.ai/v1"

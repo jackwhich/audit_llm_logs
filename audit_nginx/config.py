@@ -5,6 +5,8 @@ from typing import Any
 
 import yaml
 
+from .utils.logging import LoggingConfig
+
 
 @dataclass(frozen=True)
 class ElasticsearchConfig:
@@ -78,6 +80,7 @@ class AppConfig:
     output: OutputConfig
     llm: LLMConfig
     rules: RulesConfig
+    logging: LoggingConfig
 
 
 def _get(d: dict[str, Any], key: str, default: Any = None) -> Any:
@@ -93,6 +96,7 @@ def load_config(path: str) -> AppConfig:
     out = data.get("output", {}) or {}
     llm = data.get("llm", {}) or {}
     rules = data.get("rules", {}) or {}
+    logging_cfg_raw = data.get("logging", {}) or {}
 
     es_cfg = ElasticsearchConfig(
         url=str(es["url"]),
@@ -142,11 +146,18 @@ def load_config(path: str) -> AppConfig:
         auth_path_keywords=list(_get(rules, "auth_path_keywords", [])) or [],
     )
 
+    log_cfg = LoggingConfig(
+        level=str(_get(logging_cfg_raw, "level", "INFO")),
+        to_file=bool(_get(logging_cfg_raw, "to_file", False)),
+        file_path=str(_get(logging_cfg_raw, "file_path", "./logs/audit.log")),
+    )
+
     return AppConfig(
         elasticsearch=es_cfg,
         query=query_cfg,
         output=output_cfg,
         llm=llm_cfg,
         rules=rules_cfg,
+        logging=log_cfg,
     )
 

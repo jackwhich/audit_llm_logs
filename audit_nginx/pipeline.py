@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from elastic_transport import ConnectionError as ESConnectionError
 
 from .config import AppConfig
@@ -17,7 +18,9 @@ def run_pipeline(cfg: AppConfig, window: TimeWindow, max_docs: int, page_size: i
     主流程（便于后期扩展）：
     - fetch（ES） -> normalize -> AI analyze（全量）+ AI summary（可选） -> 返回结构化结果
     """
+    log = logging.getLogger("audit_nginx.pipeline")
     try:
+        log.info("fetching from es (max_docs=%s page_size=%s)", max_docs, page_size)
         raw_hits = fetch_events_from_es(
             es_cfg=cfg.elasticsearch,
             window=window,
@@ -29,13 +32,17 @@ def run_pipeline(cfg: AppConfig, window: TimeWindow, max_docs: int, page_size: i
             "无法连接 Elasticsearch。请检查 config/audit.yaml 中的 elasticsearch.url/user/password/verify_certs。"
         ) from e
 
+    log.info("fetched hits=%s, normalizing...", len(raw_hits))
     events = normalize_events(raw_hits, cfg.elasticsearch.time_field, cfg.query.timezone)
+    log.info("normalized events=%s", len(events))
 
     # 仅基础统计（不做规则判断）
     audit = basic_audit(events)
     llm_summary = maybe_summarize_with_llm(audit, cfg.llm)
 
+    log.info("per-event llm audit starting (enabled=%s)", cfg.llm.per_event_enabled)
     per_event = analyze_all_events_with_llm(events, cfg.llm, window)
+    log.info("per-event llm audit done (results=%s jsonl=%s)", len(per_event.results), per_event.jsonl_path)
 
     per_event_ai = None
     if per_event.results:
