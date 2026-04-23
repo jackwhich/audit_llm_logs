@@ -1,0 +1,75 @@
+elasticsearch:
+  url: "http://localhost:9200"
+  user: "elastic"
+  password: "changeme"
+  index_pattern: "nginx-*"
+  # 常见：@timestamp；如果你是自定义字段可改这里
+  time_field: "@timestamp"
+  # 可选：如果 ES 使用自签证书/内网 http，可先关；生产建议开启并配置 ca_certs
+  verify_certs: false
+
+query:
+  timezone: "Asia/Shanghai"
+  window_hours: 24
+  # 拉取最大文档数，防止窗口内日志过大导致 OOM
+  max_docs: 200000
+  page_size: 2000
+
+output:
+  dir: "./reports"
+  # 支持 {start} {end} {run_ts}
+  filename_pattern: "nginx_audit_{run_ts}.html"
+
+llm:
+  enabled: true
+  base_url: "https://llm.siraya.ai/v1"
+  api_key: "YOUR_API_KEY"
+  model: "<MODEL_NAME>"
+  # 让 AI 直接生成完整 HTML 报告（开启后不再使用 templates/report.html.j2）
+  report_html_enabled: false
+  # 生成 HTML 时按批次生成（推荐，避免 token 爆）
+  report_html_batching_enabled: true
+  # 每批给 AI 多少条逐条审计结果用来生成明细表格行
+  report_html_batch_size: 50
+  # 如果该域名需要走代理，打开这里
+  proxy_enabled: false
+  # 代理配置（二选一）：
+  # 1) 单一代理（简单）：proxy_url
+  # 2) 分协议代理（“一个 http 一个 https”）：proxy_http_url / proxy_https_url
+  #
+  # 常见写法：
+  # - HTTP 代理：  http://127.0.0.1:7890
+  # - SOCKS5：    socks5://127.0.0.1:7890
+  proxy_url: ""
+  proxy_http_url: "http://127.0.0.1:7890"
+  proxy_https_url: "http://127.0.0.1:7890"
+  # 发送给模型的“证据样本”条数上限
+  max_evidence_samples: 30
+  # 如果你要“所有日志都让 AI 分析”，打开这个开关
+  per_event_enabled: true
+  # 批量开关：关掉后每条事件单独请求（方便先验证“全量日志都能分析”）
+  per_event_batching_enabled: true
+  # 批量分析：每次请求携带多少条事件（越大越省请求，但单次更慢/更吃 token）
+  per_event_batch_size: 20
+  # 截断开关：关掉后尽量发送完整 message（方便先验证）
+  per_event_truncate_enabled: true
+  # 每条事件最多给 AI 多少字符（避免 message 超长）
+  per_event_max_chars: 2000
+  # 全量结果侧边文件（jsonl），支持 {run_ts}
+  per_event_jsonl_path: "./reports/ai_event_audit_{run_ts}.jsonl"
+
+rules:
+  # 你要求“不要自己写规则”，这里默认关闭；报告主要来自 AI 审计结果
+  enabled: false
+  # 可疑路径关键字（可按需扩展）
+  sensitive_path_keywords:
+    - "/.git/"
+    - "/wp-admin"
+    - "/phpmyadmin"
+    - "/.env"
+    - "/config"
+  # 登录相关路径（用于爆破检测聚合）
+  auth_path_keywords:
+    - "/login"
+    - "/signin"
+    - "/auth"

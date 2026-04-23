@@ -1,0 +1,5 @@
+openai
+elasticsearch>=8.0.0
+PyYAML
+Jinja2
+python-dateutil
